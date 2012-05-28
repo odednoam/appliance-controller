@@ -5,6 +5,7 @@ import base64
 from lxml import etree
 import StringIO
 import time
+import logging
 
 class HttpSensor(PowerControllerSensor.PowerControllerSensor):
     	def __init__(self, url, xpath=None, user=None, password=None, interval=2):
@@ -35,14 +36,14 @@ class HttpSensor(PowerControllerSensor.PowerControllerSensor):
 		self.http_connection.request("GET",  self.url_used, headers=self.headers)
 		response = self.http_connection.getresponse()
 		content = response.read()
-		#print "content", content
+		logging.debug("HTTP response content: %s", content)
 		if (self.xpath != None):
 			parser = etree.HTMLParser()
 			tree = etree.fromstring(content,parser)
-			#print "tree", etree.tostring(tree)
+			logging.debug("normalized tree: %s", etree.tostring(tree))
 			r = tree.xpath(self.xpath)
-			#print "xpath result", r
-			#print "r.content", r[0].text
+			logging.debug("xpath result: %s", r)
+			#logging.debug("xpath result content: %s", r[0].text)
 			exit
 		
 		

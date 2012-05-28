@@ -4,6 +4,9 @@ import select
 import time
 import re
 import os
+import logging
+import string
+from optparse import OptionParser
 
 class Device:
 	def __init__(self, config, section):
@@ -23,21 +26,40 @@ class Device:
 	
 	def power_on(self):
 		if (not self.power_state): 
-			print "Powering on " + self.device_name + " (command: " + self.power_on_command + ")"
+			logging.info("Powering on %s (command: %s)", self.device_name, self.power_on_command)
 			self.power_state = True
 			ret = os.system(self.power_on_command)
-			print "ret", ret
+			logging.debug("return value from executing command: %s", ret)
 	
 	def power_off(self):
 		if (self.power_state): 
-			print "Powering off " + self.device_name + " (command: " + self.power_off_command + ")"
+			logging.info("Powering off %s (command: %s)", self.device_name, self.power_off_command)
 			self.power_state = False
 			ret = os.system(self.power_off_command)
-			print "ret", ret
+			logging.debug("return value from executing command: %s", ret)
 
+def search_file(filename, paths):
+   """Given a search path, find file
+   """
+   file_found = 0
+   for path in paths:
+      if os.path.exists(os.path.join(path, filename)):
+          file_found = 1
+          break
+   if file_found:
+      return os.path.abspath(os.path.join(path, filename))
+   else:
+      return None
+
+cmdline_parser = OptionParser()
+cmdline_parser.add_option("-d", "--debug", action="callback", callback=lambda x,y,z,w:logging.basicConfig(level=logging.DEBUG))
+cmdline_parser.add_option("-i", "--info", action="callback", callback=lambda x,y,z,w:logging.basicConfig(level=logging.INFO))
+cmdline_parser.parse_args()
 
 config = ConfigParser.RawConfigParser()
-config.readfp(open('powercontroller.cfg'))
+config_file = search_file('powercontroller.cfg', ['.', '~/', '/etc/powercontroller'])
+logging.info("Loading configuration from %s", config_file)
+config.readfp(open(config_file))
 sensors = []
 devices = []
 
@@ -63,7 +85,7 @@ for section in config.sections():
 			else:
 				actual_args.append(config.get(section, config_arg))
 		sensor = sensor_class(*actual_args)
-		#print "Instantiated sensor:", sensor
+		logging.info("Instantiated sensor: %s", sensor)
 		sensors.append(sensor)
 		
 	else:
@@ -83,14 +105,14 @@ while 1:
 			fds[fd] = s
 
 	if (timeout == 0):
-	#	print "selecting without timeout "
+		logging.debug("selecting without timeout ")
 		selected_fds = select.select(fds.keys(), [], [])[0]
 	else:
-	#	print "selecting with timeout ", timeout
+		logging.debug("selecting with timeout %d", timeout)
 		selected_fds = select.select(fds.keys(), [], [], timeout)[0]
 	for fd in selected_fds:
 		fds[fd].do_read()
-	#print "timeout is", timeout, "time since last poll", (time.time() - last_poll)
+	logging.debug("timeout is %d, time since last poll %d", timeout, (time.time() - last_poll))
 	if (timeout > 0 and (time.time() - last_poll)*1000 > timeout):
 		last_poll = time.time()
 		for s in sensors: s.do_poll()
@@ -100,4 +122,3 @@ while 1:
 	if state != old_state: 
 		for d in devices: d.update_state(state)
 	old_state = state
-print "byebye!"

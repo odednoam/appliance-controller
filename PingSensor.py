@@ -4,6 +4,7 @@ import struct
 import PowerControllerSensor
 import os
 import time
+import logging
 
 process_id = os.getpid()
 BUFSIZE=1500
@@ -60,7 +61,7 @@ class PingSensor(PowerControllerSensor.PowerControllerSensor):
 		## calculate rounttrip time
 		rtt =  current_time - timestamp
 		rtt *= 1000
-		#print "%d bytes from %s: id=%s, seq=%u, rtt=%.3f ms" % (len(buf),
-		#	"addr", ident, seq, rtt)
+		logging.debug("%d bytes from %s: id=%s, seq=%u, rtt=%.3f ms" % (len(buf),
+			"addr", ident, seq, rtt)
 		self.last_response_time = current_time
 
